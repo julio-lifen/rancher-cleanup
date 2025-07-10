@@ -51,12 +51,13 @@ fi
 kcd()
 {
     i="0"
-    while [ $i -lt 4 ]; do
-        if timeout 21 sh -c 'kubectl delete --ignore-not-found=true --grace-period=15 --timeout=20s '"$*"''; then
-            break
-        fi
-        i=$((i+1))
-    done
+    echo "Delete: $*"
+    #while [ $i -lt 4 ]; do
+    #    if timeout 21 sh -c 'kubectl delete --ignore-not-found=true --grace-period=15 --timeout=20s '"$*"''; then
+    #        break
+    #    fi
+    #    i=$((i+1))
+    #done
 }
 
 kcpf()
@@ -64,7 +65,7 @@ kcpf()
   FINALIZERS=$(kubectl get -o jsonpath="{.metadata.finalizers}" "$@")
   if [ "x${FINALIZERS}" != "x" ]; then
       echo "Finalizers before for ${*}: ${FINALIZERS}"
-      kubectl patch -p '{"metadata":{"finalizers":null}}' --type=merge "$@"
+      echo "kubectl patch -p '{"metadata":{"finalizers":null}}' --type=merge "$@""
       echo "Finalizers after for ${*}: $(kubectl get -o jsonpath="{.metadata.finalizers}" "${@}")"
   fi
 }
@@ -76,16 +77,18 @@ kcdns()
     FINALIZERS=$(kubectl get -o jsonpath="{.spec.finalizers}" namespace "$1")
     if [ "x${FINALIZERS}" != "x" ]; then
         echo "Finalizers before for namespace ${1}: ${FINALIZERS}"
-        kubectl get -o json namespace "$1" | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/"   | kubectl replace --raw /api/v1/namespaces/$1/finalize -f -
+        #kubectl get -o json namespace "$1" | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/"   | kubectl replace --raw /api/v1/namespaces/$1/finalize -f -
+        echo "Replace finalizers for NS"
         echo "Finalizers after for namespace ${1}: $(kubectl get -o jsonpath="{.spec.finalizers}" namespace ${1})"
     fi
     i="0"
-    while [ $i -lt 4 ]; do
-        if timeout 21 sh -c 'kubectl delete --ignore-not-found=true --grace-period=15 --timeout=20s namespace '"$1"''; then
-            break
-        fi
-        i=$((i+1))
-    done
+    echo "Delete namespace: $1"
+    #while [ $i -lt 4 ]; do
+    #    if timeout 21 sh -c 'kubectl delete --ignore-not-found=true --grace-period=15 --timeout=20s namespace '"$1"''; then
+    #        break
+    #    fi
+    #    i=$((i+1))
+    #done
   fi
 }
 
@@ -98,7 +101,7 @@ else
 fi
 }
 
-set -x
+#set -x
 # Namespaces with resources that probably have finalizers/dependencies (needs manual traverse to patch and delete else it will hang)
 CATTLE_NAMESPACES="local cattle-system cattle-impersonation-system cattle-global-data cattle-global-nt cattle-provisioning-capi-system"
 TOOLS_NAMESPACES="istio-system cattle-resources-system cis-operator-system cattle-dashboards cattle-gatekeeper-system cattle-alerting cattle-logging cattle-pipeline cattle-prometheus rancher-operator-system cattle-monitoring-system cattle-logging-system cattle-elemental-system"
@@ -106,7 +109,8 @@ FLEET_NAMESPACES="cattle-fleet-clusters-system cattle-fleet-local-system cattle-
 
 # Delete rancher install to not have anything running that (re)creates resources
 kcd "-n cattle-system deploy,ds --all"
-kubectl -n cattle-system wait --for delete pod --selector=app=rancher
+#kubectl -n cattle-system wait --for delete pod --selector=app=rancher
+echo "kubectl -n cattle-system wait --for delete pod --selector=app=rancher"
 # Delete the only resource not in cattle namespaces
 kcd "-n kube-system configmap cattle-controllers"
 
